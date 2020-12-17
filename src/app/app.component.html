@@ -1,0 +1,104 @@
+<div class="main-container mat-app-background">
+  <div *ngIf="!session" class="welcome-container">
+    <div class="welcome-form-container">
+      <mat-form-field
+        appearance="fill">
+        <mat-label>Meeting Id</mat-label>
+        <input
+          [(ngModel)]="meetingId"
+          matInput
+          autocomplete="off"
+          (keyup.enter)="onJoinButtonClick()">
+      </mat-form-field>
+
+      <mat-form-field
+        appearance="fill">
+        <mat-label>Nickname</mat-label>
+        <input
+          [(ngModel)]="nickname"
+          matInput
+          autocomplete="off"
+          (keyup.enter)="onJoinButtonClick()">
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="!meetingId || !nickname"
+        (click)="onJoinButtonClick()">
+        JOIN
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="session" class="chat-container">
+    <div #body class="body">
+      <div
+        *ngFor="let message of messages"
+        class="message"
+        [ngClass]="message.message.participantId === me.id ? 'my-message' : 'remote-message'">
+        <div>
+          <span *ngIf="message.message.participantId !== me.id" class="message-nickname">{{ message.message.nickname }}</span>
+          <div class="message-time-sent-container">
+            <span class="message-time" [ngClass]="message.message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ epochToTime(message.message.sentAt) }}</span>
+            <mat-icon *ngIf="message.sent" class="sent-icon">check</mat-icon>
+          </div>
+        </div>
+
+        <div
+          *ngIf="message.attachment"
+          class="message-attachment-container"
+          [ngClass]="message.message.participantId === me.id ? 'message-attachment-container--my-message' : 'message-attachment-container--remote-message'">
+          <span>{{ message.attachment.name }}</span>
+          <mat-progress-bar *ngIf="message.attachment.progress >= 0 && message.attachment.progress <= 99" mode="determinate" color="warn" [value]="message.attachment.progress"></mat-progress-bar>
+          <div *ngIf="message.attachment.url">
+            <a
+              [href]="message.attachment.url"
+              class="message-attachment-link">
+              Download
+            </a>
+          </div>
+        </div>
+
+        <span
+          class="message-text"
+          [class.message-text--my-message-text]="message.message.participantId === me.id">
+          {{ message.message.text }}
+        </span>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="my-message-container">
+        <div *ngIf="attachment" class="attachment-container">
+          <button mat-button matSuffix mat-icon-button class="attachment-remove-button" (click)="onRemoveAttachmentButtonClick()">
+            <mat-icon>clear</mat-icon>
+          </button>
+          <p>
+            <span>File: </span> <span>{{attachment.name}}</span>
+          </p>
+          <p>
+            <span>Size: </span> <span>{{bytes(attachment.size)}}</span>
+          </p>
+        </div>
+
+        <mat-form-field
+          appearance="fill">
+          <mat-label>Type here...</mat-label>
+          <input
+            matInput
+            autocomplete="off"
+            [(ngModel)]="myMessage"
+            (keyup.enter)="send()">
+          <button mat-button matSuffix mat-icon-button (click)="send()">
+            <mat-icon>send</mat-icon>
+          </button>
+        </mat-form-field>
+      </div>
+
+      <input #fileInput [hidden]="true" type="file" (change)="onFileChange($event)">
+      <button class="attach-button" mat-button matSuffix mat-icon-button (click)="onAttachButtonClick()">
+        <mat-icon>attach_file</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>
