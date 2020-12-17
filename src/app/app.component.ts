@@ -46,7 +46,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private addMessage(message: IMessage): void {
     this.messages.push(message);
-    console.log(this.body.nativeElement);
     this._changeChangeDetectorRef.detectChanges();
     this.body.nativeElement.scrollTop = this.body.nativeElement.scrollHeight - this.body.nativeElement.clientHeight;  
   }
