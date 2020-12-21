@@ -40,7 +40,7 @@
         <div>
           <span *ngIf="message.message.participantId !== me.id" class="message-nickname">{{ message.message.nickname }}</span>
           <div class="message-time-sent-container">
-            <span class="message-time" [ngClass]="message.message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ epochToTime(message.message.sentAt) }}</span>
+            <span class="message-time" [ngClass]="message.message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ message.message.sentAt.toLocaleTimeString().substr(0, 5) }}</span>
             <mat-icon *ngIf="message.sent" class="sent-icon">check</mat-icon>
           </div>
         </div>

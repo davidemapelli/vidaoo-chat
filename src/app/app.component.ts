@@ -50,10 +50,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.body.nativeElement.scrollTop = this.body.nativeElement.scrollHeight - this.body.nativeElement.clientHeight;  
   }
 
-  public epochToTime(epoch: number): string {
-    return new Date(epoch).toLocaleTimeString().substr(0, 5);
-  }
-
   public onAttachButtonClick(): void {
     this.fileInput.nativeElement.click();
   }
@@ -159,7 +155,7 @@ export class AppComponent implements OnInit, OnDestroy {
         participantId: this.me.id,
         nickname: this.nickname,
         text: this.myMessage,
-        sentAt: new Date().getTime() / 1000
+        sentAt: new Date()
       },
       sent: false
     };
