@@ -21,6 +21,11 @@
   font-size: 18px;
 }
 
+.attachment-size-alert {
+  color: red;
+  margin-left: 10px;
+}
+
 .body {
   display: flex;
   flex: 1;

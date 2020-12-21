@@ -78,6 +78,7 @@
           </p>
           <p>
             <span>Size: </span> <span>{{bytes(attachment.size)}}</span>
+            <span *ngIf="attachment.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
           </p>
         </div>
 
