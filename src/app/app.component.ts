@@ -1,7 +1,8 @@
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { IFileProgress, INewParticipant, INewMessage, ISessionEmittedData, LoggerLevel, Session, SessionEmittedDataType, Mode, IFileReady } from 'vidaoo-browser';
+import { IFileProgress, INewParticipant, INewMessage, ISessionEmittedData, LoggerLevel, Session, SessionEmittedDataType, ErrorCode as SignalerErrorCode, Mode, IFileReady } from 'vidaoo-browser';
 import { v4 as uuidv4 } from 'uuid';
+import { ISignalerError } from 'vidaoo-browser/dist/interfaces/ISessionInterfaces';
 
 interface IAttachment {
   name: string;
@@ -48,6 +49,11 @@ export class AppComponent implements OnInit, OnDestroy {
     this.messages.push(message);
     this._changeChangeDetectorRef.detectChanges();
     this.body.nativeElement.scrollTop = this.body.nativeElement.scrollHeight - this.body.nativeElement.clientHeight;  
+  }
+
+  public onAbortAttachmentUploadButtonClick(fileId: string): void {
+    this.session.abortFileUpload(fileId);
+    this.removeMessage(fileId);
   }
 
   public onAttachButtonClick(): void {
@@ -118,6 +124,14 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async onSignalerError(error: ISignalerError): Promise<void> {
+    switch (error.code) {
+      case SignalerErrorCode.ErrorUpload:
+        this.removeMessage(error.metadata.id);
+        break;
+    }
+  }
+
   public onRemoveAttachmentButtonClick(): void {
     this.removeAttachment();
   }
@@ -136,12 +150,22 @@ export class AppComponent implements OnInit, OnDestroy {
       case SessionEmittedDataType.NewMessage:
         await this.onNewMessage(data.data as INewMessage);
         break;
+      case SessionEmittedDataType.SignalerError:
+        await this.onSignalerError(data.data as ISignalerError);
+        break;
     }
   }
 
   private removeAttachment(): void {
     this.fileInput.nativeElement.value = '';
     this.attachment = null;
+  }
+
+  private removeMessage(id: string): void {
+    const message = this.messages.find(m => m.message.id === id);
+    if (message) {
+      this.messages.splice(this.messages.indexOf(message), 1);
+    }
   }
 
   public async send(): Promise<void> {

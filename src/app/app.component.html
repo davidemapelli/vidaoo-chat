@@ -50,7 +50,14 @@
           class="message-attachment-container"
           [ngClass]="message.message.participantId === me.id ? 'message-attachment-container--my-message' : 'message-attachment-container--remote-message'">
           <span>{{ message.attachment.name }}</span>
-          <mat-progress-bar *ngIf="message.attachment.progress >= 0 && message.attachment.progress <= 99" mode="determinate" color="warn" [value]="message.attachment.progress"></mat-progress-bar>
+          <div *ngIf="message.attachment.progress >= 0 && message.attachment.progress <= 99" class="message-attachment-progress-bar-container">
+            <mat-progress-bar mode="determinate" color="warn" [value]="message.attachment.progress"></mat-progress-bar>
+            <mat-icon
+              class="message-attachment-abort-icon"
+              (click)="onAbortAttachmentUploadButtonClick(message.message.id)">
+              clear
+            </mat-icon>
+          </div>
           <div *ngIf="message.attachment.url">
             <a
               [href]="message.attachment.url"

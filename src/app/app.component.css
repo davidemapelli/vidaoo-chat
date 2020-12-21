@@ -47,28 +47,32 @@
   padding-right: 20px;
 }
 
-.message {
-  border-radius: 10px;
-  padding: 10px;
-}
-.message:first-child {
-  margin-top: auto;
-}
-
 .main-container {
   height: 100%;
 }
 
-.my-message {
-  align-self: flex-end;
-  background-color: #7B1FA2;
-}
-
 .message {
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
   margin-bottom: 5px;
   max-width: 80%;
+  padding: 10px;
+}
+
+.message:first-child {
+  margin-top: auto;
+}
+
+.message-attachment-abort-icon {
+  font-size: 14px;
+  height: 14px;
+  margin-left: 8px;
+  width: 14px;
+}
+
+.message-attachment-abort-icon:hover {
+  cursor: pointer;
 }
 
 .message-attachment-container {
@@ -87,14 +91,16 @@
   background-color: #0162e4;
 }
 
-.message-attachment-container mat-progress-bar {
-  margin-top: 10px;
-}
-
 .message-attachment-link {
   color: #fff;
   font-weight: bold;
   text-decoration: none;
+}
+
+.message-attachment-progress-bar-container {
+  align-items: center;
+  display: flex;
+  margin-top: 5px;
 }
 
 .message-nickname {
@@ -126,6 +132,11 @@
 .message-time-sent-container {
   display: inline;
   float: right;
+}
+
+.my-message {
+  align-self: flex-end;
+  background-color: #7B1FA2;
 }
 
 .my-message-container {
