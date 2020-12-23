@@ -74,39 +74,44 @@
         </span>
       </div>
     </div>
+
     <div class="footer">
-      <div class="my-message-container">
-        <div *ngIf="attachment" class="attachment-container">
-          <button mat-button matSuffix mat-icon-button class="attachment-remove-button" (click)="onRemoveAttachmentButtonClick()">
-            <mat-icon>clear</mat-icon>
-          </button>
-          <p>
-            <span>File: </span> <span>{{attachment.name}}</span>
-          </p>
-          <p>
-            <span>Size: </span> <span>{{bytes(attachment.size)}}</span>
-            <span *ngIf="attachment.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
-          </p>
+      <div *ngIf="getTypingMessage()" class="typing-message">{{ getTypingMessage() }}</div>
+
+      <div class="my-message-row">
+        <input #fileInput [hidden]="true" type="file" (change)="onFileChange($event)">
+        <button class="attach-button" mat-button matSuffix mat-icon-button (click)="onAttachButtonClick()">
+          <mat-icon>attach_file</mat-icon>
+        </button>
+
+        <div class="my-message-container">
+          <div *ngIf="attachment" class="attachment-container">
+            <button mat-button matSuffix mat-icon-button class="attachment-remove-button" (click)="onRemoveAttachmentButtonClick()">
+              <mat-icon>clear</mat-icon>
+            </button>
+            <p>
+              <span>File: </span> <span>{{attachment.name}}</span>
+            </p>
+            <p>
+              <span>Size: </span> <span>{{bytes(attachment.size)}}</span>
+              <span *ngIf="attachment.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
+            </p>
+          </div>
+  
+          <mat-form-field
+            appearance="fill">
+            <mat-label>Type here...</mat-label>
+            <input
+              matInput
+              autocomplete="off"
+              [(ngModel)]="myMessage"
+              (keyup)="onMyMessageKeyup($event)">
+            <button mat-button matSuffix mat-icon-button (click)="send()">
+              <mat-icon>send</mat-icon>
+            </button>
+          </mat-form-field>
         </div>
-
-        <mat-form-field
-          appearance="fill">
-          <mat-label>Type here...</mat-label>
-          <input
-            matInput
-            autocomplete="off"
-            [(ngModel)]="myMessage"
-            (keyup.enter)="send()">
-          <button mat-button matSuffix mat-icon-button (click)="send()">
-            <mat-icon>send</mat-icon>
-          </button>
-        </mat-form-field>
       </div>
-
-      <input #fileInput [hidden]="true" type="file" (change)="onFileChange($event)">
-      <button class="attach-button" mat-button matSuffix mat-icon-button (click)="onAttachButtonClick()">
-        <mat-icon>attach_file</mat-icon>
-      </button>
     </div>
   </div>
 </div>

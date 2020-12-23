@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild 
 import { Subscription } from 'rxjs';
 import { IFileProgress, INewParticipant, INewMessage, ISessionEmittedData, LoggerLevel, Session, SessionEmittedDataType, ErrorCode as SignalerErrorCode, Mode, IFileReady } from 'vidaoo-browser';
 import { v4 as uuidv4 } from 'uuid';
-import { ISignalerError } from 'vidaoo-browser/dist/interfaces/ISessionInterfaces';
+import { IRemoveParticipant, ISignalerError, ITyping } from 'vidaoo-browser/dist/interfaces/ISessionInterfaces';
 
 interface IAttachment {
   name: string;
@@ -12,10 +12,16 @@ interface IAttachment {
 }
 
 interface IMessage {
-  message: INewMessage,
-  attachment?: IAttachment,
-  sent?: boolean
+  message: INewMessage;
+  attachment?: IAttachment;
+  sent?: boolean;
 };
+
+interface IParticipant {
+  id: string;
+  nickname: string;
+  typing: boolean;
+}
 
 @Component({
   selector: 'app-root',
@@ -26,6 +32,8 @@ export class AppComponent implements OnInit, OnDestroy {
   @ViewChild('body') body: ElementRef;
   @ViewChild('fileInput') fileInput: ElementRef;
 
+  private _participants: IParticipant[] = [];
+  private _typing: boolean = false;
   public attachment: File;
   public bytes = require('bytes');
   public me = { id: uuidv4() };
@@ -47,8 +55,22 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private addMessage(message: IMessage): void {
     this.messages.push(message);
-    this._changeChangeDetectorRef.detectChanges();
-    this.body.nativeElement.scrollTop = this.body.nativeElement.scrollHeight - this.body.nativeElement.clientHeight;  
+    this.scrollMessagesBottom(); 
+  }
+
+  public getTypingMessage(): string {
+    const typingParticipants = this._participants.filter(p => p.typing);
+    if (typingParticipants.length === 0) {
+      return '';
+    } else if (typingParticipants.length === 1) {
+      return `${ typingParticipants[0].nickname } is typing...`;
+    } else if (typingParticipants.length === 2) {
+      return `${ typingParticipants[0].nickname } and ${ typingParticipants[1].nickname } are typing...`;
+    } else if (typingParticipants.length === 3) {
+      return `${ typingParticipants[0].nickname }, ${ typingParticipants[1].nickname } and ${ typingParticipants[2].nickname } are typing...`;
+    } else {
+      return `${ typingParticipants[0].nickname } and others are typing...`;
+    }
   }
 
   public onAbortAttachmentUploadButtonClick(fileId: string): void {
@@ -114,6 +136,18 @@ export class AppComponent implements OnInit, OnDestroy {
     this.me = me;
   }
 
+  public onMyMessageKeyup(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      this.send();
+    } else if (this.myMessage && !this._typing) {
+      this._typing = true;
+      this.session.sendTyping(true);
+    } else if (!this.myMessage && this._typing) {
+      this._typing = false;
+      this.session.sendTyping(false);
+    }
+  }
+
   private async onNewMessage(message: INewMessage): Promise<void> {
     if (message.participantId === this.me.id) {
       const myMessage: IMessage = this.messages.find(m => m.message.id === message.id);
@@ -124,11 +158,33 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async onNewParticiapnts(participant: INewParticipant): Promise<void> {
+    this._participants.push({
+      id: participant.id,
+      nickname: participant.nickname,
+      typing: false
+    });
+  }
+
+  private async onRemoveParticiapnts(participant: IRemoveParticipant): Promise<void> {
+    const participantToRemove = this._participants.find(p => p.id === participant.id);
+    if (participantToRemove) {
+      this._participants.splice(this._participants.indexOf(participantToRemove), 1);
+    }
+  }
+
   private async onSignalerError(error: ISignalerError): Promise<void> {
     switch (error.code) {
       case SignalerErrorCode.ErrorUpload:
         this.removeMessage(error.metadata.id);
         break;
+    }
+  }
+
+  private async onTyping(params: ITyping): Promise<void> {
+    const participant = this._participants.find(p => p.id === params.participantId);
+    if (participant) {
+      participant.typing = params.typing;
     }
   }
 
@@ -150,8 +206,17 @@ export class AppComponent implements OnInit, OnDestroy {
       case SessionEmittedDataType.NewMessage:
         await this.onNewMessage(data.data as INewMessage);
         break;
+      case SessionEmittedDataType.NewParticipant:
+        await this.onNewParticiapnts(data.data as INewParticipant);
+        break;
+      case SessionEmittedDataType.RemoveParticipant:
+        await this.onRemoveParticiapnts(data.data as IRemoveParticipant);
+        break;
       case SessionEmittedDataType.SignalerError:
         await this.onSignalerError(data.data as ISignalerError);
+        break;
+      case SessionEmittedDataType.Typing:
+        await this.onTyping(data.data as ITyping);
         break;
     }
   }
@@ -166,6 +231,11 @@ export class AppComponent implements OnInit, OnDestroy {
     if (message) {
       this.messages.splice(this.messages.indexOf(message), 1);
     }
+  }
+
+  private scrollMessagesBottom(): void {
+    this._changeChangeDetectorRef.detectChanges();
+    this.body.nativeElement.scrollTop = this.body.nativeElement.scrollHeight - this.body.nativeElement.clientHeight; 
   }
 
   public async send(): Promise<void> {
@@ -194,5 +264,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.addMessage(message);
     this.myMessage = '';
+    this._typing = false;
+    this.session.sendTyping(false);
   }
 }
