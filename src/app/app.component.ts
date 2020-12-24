@@ -2,7 +2,9 @@ import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild 
 import { Subscription } from 'rxjs';
 import { IFileProgress, INewParticipant, INewMessage, ISessionEmittedData, LoggerLevel, Session, SessionEmittedDataType, ErrorCode as SignalerErrorCode, Mode, IFileReady } from 'vidaoo-browser';
 import { v4 as uuidv4 } from 'uuid';
-import { IRemoveParticipant, ISignalerError, ITyping } from 'vidaoo-browser/dist/interfaces/ISessionInterfaces';
+import { IDeleteMessage, IEditMessage, IRemoveParticipant, ISignalerError, ITyping } from 'vidaoo-browser/dist/interfaces/ISessionInterfaces';
+import { MatDialog } from '@angular/material/dialog';
+import { Action, IInjectedData, IResult, MessageDialogComponent } from './message-dialog/message-dialog.component';
 
 interface IAttachment {
   name: string;
@@ -44,7 +46,10 @@ export class AppComponent implements OnInit, OnDestroy {
   public session: Session;
   public sessionSubscription: Subscription;
 
-  constructor(private _changeChangeDetectorRef: ChangeDetectorRef) {}
+  constructor(
+    private _changeChangeDetectorRef: ChangeDetectorRef,
+    private _dialog: MatDialog
+  ) {}
 
   public ngOnInit() {
   }
@@ -56,6 +61,15 @@ export class AppComponent implements OnInit, OnDestroy {
   private addMessage(message: IMessage): void {
     this.messages.push(message);
     this.scrollMessagesBottom(); 
+  }
+
+  private downloadFile(urlString: string, name: string): void {
+    const link = document.createElement('a');
+    link.setAttribute('download', name);
+    link.href = urlString;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   public getTypingMessage(): string {
@@ -100,6 +114,17 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  private onDeleteMessage(message: IDeleteMessage): void {
+    this.removeMessage(message.id);
+  }
+
+  private onEditMessage(message: IEditMessage): void {
+    const messageToEdit = this.messages.find(m => m.message.id === message.id);
+    if (messageToEdit) {
+      messageToEdit.message.text = message.text;
+    }
+  }
+
   private onFileProgress(file: IFileProgress): void {
     const message = this.messages.find(m => m.message.id === file.id);
     if (message) {
@@ -112,6 +137,8 @@ export class AppComponent implements OnInit, OnDestroy {
       const message = this.messages.find(m => m.message.id === file.id);
       if (message) {
         message.sent = true;
+        message.attachment.url = file.url;
+        message.attachment.size = file.size;
       }
     } else {
       const message: IMessage = {
@@ -134,6 +161,37 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async onMe(me: INewParticipant): Promise<void> {
     this.me = me;
+  }
+
+  public onMessageClick(message: IMessage): void {
+    const isMessageMine = message.message.participantId === this.me.id;
+    const injectedData: IInjectedData = {
+      messageId: message.message.id,
+      messageText: message.message.text,
+      showDeleteButton: isMessageMine,
+      showDownloadButton: !!message.attachment,
+      showEditButton: isMessageMine,
+      showReplyButton: !isMessageMine
+    };
+    this._dialog.open(MessageDialogComponent, { width: '250px', data: injectedData })
+      .afterClosed().subscribe((result: IResult) => {
+        if (result) {
+          switch (result.action) {
+            case Action.Delete:
+              this.session.deleteMessage(result.data.id);
+              break;
+            case Action.Download:
+              const message = this.messages.find(m => m.message.id === result.data.id);
+              if (message) {
+                this.downloadFile(message.attachment.url, message.attachment.name);
+              }
+              break;
+            case Action.Edit:
+              this.session.editMessage(result.data.id, result.data.text);
+              break;
+          }
+        }
+      });
   }
 
   public onMyMessageKeyup(event: KeyboardEvent): void {
@@ -194,6 +252,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async onSessionDataEmitted(data: ISessionEmittedData): Promise<void> {
     switch (data.type) {
+      case SessionEmittedDataType.DeleteMessage:
+        await this.onDeleteMessage(data.data as IDeleteMessage);
+        break;
+      case SessionEmittedDataType.EditMessage:
+        await this.onEditMessage(data.data as IEditMessage);
+        break;
       case SessionEmittedDataType.FileProgress:
         await this.onFileProgress(data.data as IFileProgress);
         break;

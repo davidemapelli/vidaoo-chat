@@ -1,0 +1,38 @@
+<ng-container *ngIf="!showEditMessageSection">
+  <mat-dialog-content class="mat-typography buttons-container">
+    <button *ngIf="injectedData.showDownloadButton" class="choice-button" mat-raised-button color="primary" (click)="onDownloadButtonClick()">
+      <mat-icon>download</mat-icon>
+      <span>Download attachment</span>
+    </button>
+    <button *ngIf="injectedData.showReplyButton" class="choice-button" mat-raised-button color="primary" (click)="onReplyButtonClick()">
+      <mat-icon>reply</mat-icon>
+      <span>Reply</span>
+    </button>
+    <button *ngIf="injectedData.showEditButton" class="choice-button" mat-raised-button color="primary" (click)="onEditButtonClick()">
+      <mat-icon>edit</mat-icon>
+      <span>Edit message</span>
+    </button>
+    <button *ngIf="injectedData.showDeleteButton" class="choice-button" mat-raised-button color="primary" (click)="onDeleteButtonClick()">
+      <mat-icon>delete</mat-icon>
+      <span>Delete message</span>
+    </button>
+  </mat-dialog-content>
+</ng-container>
+
+<ng-container *ngIf="showEditMessageSection">
+  <mat-dialog-content class="mat-typography">
+    <mat-form-field appearance="fill">
+        <mat-label>Message</mat-label>
+        <textarea
+          [(ngModel)]="injectedData.messageText"
+          matInput
+          rows="5"
+          autocomplete="off">
+        </textarea>
+      </mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-raised-button color="primary" (click)="onSaveButtonClick()">Save</button>
+  </mat-dialog-actions>
+</ng-container>

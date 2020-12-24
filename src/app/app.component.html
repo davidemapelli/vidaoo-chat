@@ -36,7 +36,8 @@
       <div
         *ngFor="let message of messages"
         class="message"
-        [ngClass]="message.message.participantId === me.id ? 'my-message' : 'remote-message'">
+        [ngClass]="message.message.participantId === me.id ? 'my-message' : 'remote-message'"
+        (click)="onMessageClick(message)">
         <div>
           <span *ngIf="message.message.participantId !== me.id" class="message-nickname">{{ message.message.nickname }}</span>
           <div class="message-time-sent-container">
@@ -57,13 +58,6 @@
               (click)="onAbortAttachmentUploadButtonClick(message.message.id)">
               clear
             </mat-icon>
-          </div>
-          <div *ngIf="message.attachment.url">
-            <a
-              [href]="message.attachment.url"
-              class="message-attachment-link">
-              Download
-            </a>
           </div>
         </div>
 
