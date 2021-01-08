@@ -43,7 +43,13 @@ export class MessageDialogComponent implements OnInit {
   }
 
   public onReplyButtonClick(): void {
-    
+    const result: IResult = {
+      action: Action.Reply,
+      data: {
+        id: this.injectedData.messageId
+      }
+    };
+    this.dialogRef.close(result);
   }
 
   public onEditButtonClick(): void {

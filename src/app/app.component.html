@@ -36,35 +36,44 @@
       <div
         *ngFor="let message of messages"
         class="message"
-        [ngClass]="message.message.participantId === me.id ? 'my-message' : 'remote-message'"
+        [ngClass]="message.participantId === me.id ? 'my-message' : 'remote-message'"
         (click)="onMessageClick(message)">
         <div>
-          <span *ngIf="message.message.participantId !== me.id" class="message-nickname">{{ message.message.nickname }}</span>
+          <span *ngIf="message.participantId !== me.id" class="message-nickname">{{ message.nickname }}</span>
           <div class="message-time-sent-container">
-            <span class="message-time" [ngClass]="message.message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ message.message.sentAt.toLocaleTimeString().substr(0, 5) }}</span>
+            <span class="message-time" [ngClass]="message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ message.sentAt.toLocaleTimeString().substr(0, 5) }}</span>
             <mat-icon *ngIf="message.sent" class="sent-icon">check</mat-icon>
           </div>
         </div>
 
         <div
-          *ngIf="message.attachment"
-          class="message-attachment-container"
-          [ngClass]="message.message.participantId === me.id ? 'message-attachment-container--my-message' : 'message-attachment-container--remote-message'">
-          <span>{{ message.attachment.name }}</span>
-          <div *ngIf="message.attachment.progress >= 0 && message.attachment.progress <= 99" class="message-attachment-progress-bar-container">
-            <mat-progress-bar mode="determinate" color="warn" [value]="message.attachment.progress"></mat-progress-bar>
-            <mat-icon
-              class="message-attachment-abort-icon"
-              (click)="onAbortAttachmentUploadButtonClick(message.message.id)">
-              clear
-            </mat-icon>
+          *ngIf="message.attachments?.type === AttachmentType.File"
+          class="message-data-container">
+          <div class="message-attachment-title" [ngClass]="message.participantId === me.id ? 'text-light-violet' : 'text-light-blue'">Attachments</div>
+          <div class="message-attachment-list-container" *ngFor="let file of message.attachments.data">
+            <div>{{ file.name }}</div>
+            <div *ngIf="file.progress >= 0 && file.progress <= 99" class="message-attachment-progress-bar-container">
+              <mat-progress-bar mode="determinate" color="warn" [value]="file.progress"></mat-progress-bar>
+              <mat-icon
+                class="message-attachment-abort-icon"
+                (click)="onAbortAttachmentUploadButtonClick(message.id)">
+                clear
+              </mat-icon>
+            </div>
           </div>
+        </div>
+
+        <div
+          *ngIf="message.replyMessage"
+          class="message-data-container">
+          <div [ngClass]="message.participantId === me.id ? 'text-light-violet' : 'text-light-blue'">{{ message.replyMessage.nickname }}</div>
+          <div>{{ message.replyMessage.text }}</div>
         </div>
 
         <span
           class="message-text"
-          [class.message-text--my-message-text]="message.message.participantId === me.id">
-          {{ message.message.text }}
+          [class.message-text--my-message-text]="message.participantId === me.id">
+          {{ message.text }}
         </span>
       </div>
     </div>
@@ -73,23 +82,35 @@
       <div *ngIf="getTypingMessage()" class="typing-message">{{ getTypingMessage() }}</div>
 
       <div class="my-message-row">
-        <input #fileInput [hidden]="true" type="file" (change)="onFileChange($event)">
+        <input #fileInput [hidden]="true" type="file" multiple (change)="onFileChange($event)">
         <button class="attach-button" mat-button matSuffix mat-icon-button (click)="onAttachButtonClick()">
           <mat-icon>attach_file</mat-icon>
         </button>
 
         <div class="my-message-container">
-          <div *ngIf="attachment" class="attachment-container">
-            <button mat-button matSuffix mat-icon-button class="attachment-remove-button" (click)="onRemoveAttachmentButtonClick()">
+          <div *ngIf="filesToSend.length > 0" class="my-message-data-container">
+            <button mat-button matSuffix mat-icon-button class="my-message-data-clear-button" (click)="onRemoveFilesButtonClick()">
+              <mat-icon>clear</mat-icon>
+            </button>
+            <div *ngFor="let file of filesToSend">
+              <p>
+                <span class="italic">File: </span> <span>{{ file.name }}</span>
+              </p>
+              <p>
+                <span class="italic">Size: </span> <span>{{ bytes(file.size) }}</span>
+                <span *ngIf="file.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
+              </p>
+            </div>
+          </div>
+
+          <div *ngIf="replyMessage" class="my-message-data-container reply-container">
+            <button mat-button matSuffix mat-icon-button class="my-message-data-clear-button" (click)="onCancelReplyButtonClick()">
               <mat-icon>clear</mat-icon>
             </button>
             <p>
-              <span>File: </span> <span>{{attachment.name}}</span>
+              <span class="italic">Reply to: </span> <span>{{ replyMessage.nickname }}</span>
             </p>
-            <p>
-              <span>Size: </span> <span>{{bytes(attachment.size)}}</span>
-              <span *ngIf="attachment.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
-            </p>
+            <p>{{ replyMessage.text }}</p>
           </div>
   
           <mat-form-field

@@ -23,6 +23,18 @@
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+.italic  {
+  font-style: italic;
+}
+
+.text-light-blue {
+  color: #a1c9fe;
+}
+
+.text-light-violet {
+  color: #e2bcf2;
+}
+
 mat-form-field {
   width: 100%;
 }

@@ -1,21 +1,28 @@
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { IFileProgress, INewParticipant, INewMessage, ISessionEmittedData, LoggerLevel, Session, SessionEmittedDataType, ErrorCode as SignalerErrorCode, Mode, IFileReady } from 'vidaoo-browser';
+import { AttachmentType, ISignalerError, ITyping, IUploadingFileData, IDeleteMessage, IEditMessage, IFileProgress, INewParticipant, INewMessage, IRemoveParticipant, ISessionEmittedData, LoggerLevel, Session, SessionEmittedDataType, ErrorCode as SignalerErrorCode, Mode } from 'vidaoo-browser';
 import { v4 as uuidv4 } from 'uuid';
-import { IDeleteMessage, IEditMessage, IRemoveParticipant, ISignalerError, ITyping } from 'vidaoo-browser/dist/interfaces/ISessionInterfaces';
 import { MatDialog } from '@angular/material/dialog';
 import { Action, IInjectedData, IResult, MessageDialogComponent } from './message-dialog/message-dialog.component';
-
-interface IAttachment {
-  name: string;
-  progress?: number;
-  size?: number;
-  url?: string;
-}
+import { delay } from 'src/utils';
 
 interface IMessage {
-  message: INewMessage;
-  attachment?: IAttachment;
+  id: string;
+  participantId: string;
+  nickname: string;
+  text: string;
+  attachments: {
+    type: AttachmentType;
+    data: {
+      id: string;
+      name: string;
+      size: number;
+      url: string;
+      progress?: number;
+    }[]
+  },
+  replyMessage: IMessage;
+  sentAt: Date;
   sent?: boolean;
 };
 
@@ -36,13 +43,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private _participants: IParticipant[] = [];
   private _typing: boolean = false;
-  public attachment: File;
+  public AttachmentType = AttachmentType;
   public bytes = require('bytes');
+  public filesToSend: File[] = [];
   public me = { id: uuidv4() };
   public messages: IMessage[] = [];
   public meetingId: string = '';
   public myMessage: string;
   public nickname: string = '';
+  public replyMessage: IMessage;
   public session: Session;
   public sessionSubscription: Subscription;
 
@@ -63,12 +72,17 @@ export class AppComponent implements OnInit, OnDestroy {
     this.scrollMessagesBottom(); 
   }
 
-  private downloadFile(urlString: string, name: string): void {
+  private async downloadFiles(files: { name: string, url: string }[]): Promise<void> {
     const link = document.createElement('a');
-    link.setAttribute('download', name);
-    link.href = urlString;
     document.body.appendChild(link);
-    link.click();
+    for (let i = 0; i < files.length; i++) {
+      if (i !== 0) {
+        await delay(500);
+      }
+      link.setAttribute('download', files[i].name);
+      link.setAttribute('href', files[i].url);
+      link.click();
+    }
     link.remove();
   }
 
@@ -96,8 +110,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fileInput.nativeElement.click();
   }
 
+  public onCancelReplyButtonClick(): void {
+    this.replyMessage = null;
+  }
+
   public onFileChange(event: Event): void {
-    this.attachment = (event.target as HTMLInputElement).files[0];
+    this.filesToSend.splice(0, this.filesToSend.length);
+    const files = (event.target as HTMLInputElement).files;
+    for (let i = 0; i < files.length; i++) {
+      this.filesToSend.push(files[i]);
+    }
   }
 
   public async onJoinButtonClick(): Promise<void> {
@@ -119,43 +141,19 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private onEditMessage(message: IEditMessage): void {
-    const messageToEdit = this.messages.find(m => m.message.id === message.id);
+    const messageToEdit = this.messages.find(m => m.id === message.id);
     if (messageToEdit) {
-      messageToEdit.message.text = message.text;
+      messageToEdit.text = message.text;
     }
   }
 
-  private onFileProgress(file: IFileProgress): void {
-    const message = this.messages.find(m => m.message.id === file.id);
+  private onFileProgress(fileProgress: IFileProgress): void {
+    const message = this.messages.find(m => m.id === fileProgress.messageId);
     if (message) {
-      message.attachment.progress = file.progress;
-    }
-  }
-
-  private onFileReady(file: IFileReady): void {
-    if (file.participantId === this.me.id) {
-      const message = this.messages.find(m => m.message.id === file.id);
-      if (message) {
-        message.sent = true;
-        message.attachment.url = file.url;
-        message.attachment.size = file.size;
+      const file = message.attachments.data.find(f => f.id === fileProgress.id);
+      if (file) {
+        file.progress = fileProgress.progress;
       }
-    } else {
-      const message: IMessage = {
-        message: {
-          id: file.id,
-          participantId: file.participantId,
-          nickname: file.nickname,
-          text: file.text,
-          sentAt: file.sentAt
-        },
-        attachment: {
-          name: file.name,
-          size: file.size,
-          url: file.url
-        }
-      }
-      this.addMessage(message);
     }
   }
 
@@ -164,30 +162,33 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public onMessageClick(message: IMessage): void {
-    const isMessageMine = message.message.participantId === this.me.id;
+    const isMessageMine = message.participantId === this.me.id;
     const injectedData: IInjectedData = {
-      messageId: message.message.id,
-      messageText: message.message.text,
+      messageId: message.id,
+      messageText: message.text,
       showDeleteButton: isMessageMine,
-      showDownloadButton: !!message.attachment,
+      showDownloadButton: !!message.attachments,
       showEditButton: isMessageMine,
       showReplyButton: !isMessageMine
     };
     this._dialog.open(MessageDialogComponent, { width: '250px', data: injectedData })
-      .afterClosed().subscribe((result: IResult) => {
+      .afterClosed().subscribe(async (result: IResult) => {
         if (result) {
           switch (result.action) {
             case Action.Delete:
               this.session.deleteMessage(result.data.id);
               break;
             case Action.Download:
-              const message = this.messages.find(m => m.message.id === result.data.id);
+              const message = this.messages.find(m => m.id === result.data.id);
               if (message) {
-                this.downloadFile(message.attachment.url, message.attachment.name);
+                await this.downloadFiles(message.attachments.data.map(f => { return { name: f.name, url: f.url } }));
               }
               break;
             case Action.Edit:
               this.session.editMessage(result.data.id, result.data.text);
+              break;
+            case Action.Reply:
+              this.replyMessage = this.messages.find(m => m.id === result.data.id);
               break;
           }
         }
@@ -208,11 +209,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async onNewMessage(message: INewMessage): Promise<void> {
     if (message.participantId === this.me.id) {
-      const myMessage: IMessage = this.messages.find(m => m.message.id === message.id);
-      myMessage.message.sentAt = message.sentAt;
+      const myMessage = this.messages.find(m => m.id === message.id);
+      myMessage.sentAt = message.sentAt;
       myMessage.sent = true;
     } else {
-      this.addMessage({ message: message });
+      this.addMessage({
+        id: message.id,
+        participantId: message.participantId,
+        nickname: message.nickname,
+        text: message.text,
+        attachments: message.attachments,
+        sentAt: message.sentAt,
+        replyMessage: this.messages.find(m => m.id === message.replyId)
+      });
     }
   }
 
@@ -246,8 +255,8 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  public onRemoveAttachmentButtonClick(): void {
-    this.removeAttachment();
+  public onRemoveFilesButtonClick(): void {
+    this.removeAttachments();
   }
 
   private async onSessionDataEmitted(data: ISessionEmittedData): Promise<void> {
@@ -260,9 +269,6 @@ export class AppComponent implements OnInit, OnDestroy {
         break;
       case SessionEmittedDataType.FileProgress:
         await this.onFileProgress(data.data as IFileProgress);
-        break;
-      case SessionEmittedDataType.FileReady:
-        await this.onFileReady(data.data as IFileReady);
         break;
       case SessionEmittedDataType.Me:
         await this.onMe(data.data as INewParticipant);
@@ -285,13 +291,13 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private removeAttachment(): void {
+  private removeAttachments(): void {
     this.fileInput.nativeElement.value = '';
-    this.attachment = null;
+    this.filesToSend.splice(0, this.filesToSend.length);    
   }
 
   private removeMessage(id: string): void {
-    const message = this.messages.find(m => m.message.id === id);
+    const message = this.messages.find(m => m.id === id);
     if (message) {
       this.messages.splice(this.messages.indexOf(message), 1);
     }
@@ -303,31 +309,49 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public async send(): Promise<void> {
-    if (!this.myMessage && !this.attachment) {
+    if (!this.myMessage && !this.filesToSend) {
       return;
     }
 
     const message: IMessage = {
-      message: {
-        id: uuidv4(),
-        participantId: this.me.id,
-        nickname: this.nickname,
-        text: this.myMessage,
-        sentAt: new Date()
-      },
+      id: uuidv4(),
+      participantId: this.me.id,
+      nickname: this.nickname,
+      text: this.myMessage,
+      sentAt: new Date(),
+      attachments: null,
+      replyMessage: this.replyMessage,
       sent: false
     };
 
-    if (this.attachment) {
-      message.attachment = { name: this.attachment.name, progress: 0 };
-      await this.session.sendFile(message.message.id, this.attachment, this.myMessage);
-      this.removeAttachment();
+    if (this.filesToSend.length > 0) {
+      const files: IUploadingFileData[] = await this.session.sendMessageWithFiles(
+        message.id,
+        message.text,
+        this.filesToSend,
+        this.replyMessage?.id
+      );
+      message.attachments = {
+        type: AttachmentType.File,
+        data: files.map(f => { return {
+          id: f.id,
+          name: f.name,
+          size: f.size,
+          url: '',
+          progress: 0
+        }})
+      };
     } else {
-      this.session.sendMessage(message.message.id, message.message.text);
+      this.session.sendMessage(
+        message.id,
+        message.text,
+        this.replyMessage?.id);
     }
 
     this.addMessage(message);
     this.myMessage = '';
+    this.replyMessage = null;
+    this.removeAttachments();
     this._typing = false;
     this.session.sendTyping(false);
   }

@@ -3,7 +3,7 @@
   margin-right: 10px;
 }
 
-.attachment-container {
+.my-message-data-container {
   background-color: #454545;
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
@@ -11,13 +11,14 @@
   position: relative;
 }
 
-.attachment-remove-button {
+.my-message-data-clear-button {
   position: absolute;
   right: 0;
   top: 0;
 }
 
-.attachment-remove-button mat-icon {
+.attachment-remove-button mat-icon,
+.cancel-reply-button mat-icon {
   font-size: 18px;
 }
 
@@ -73,7 +74,12 @@
   cursor: pointer;
 }
 
-.message-attachment-container {
+.message-attachment-title {
+  margin-bottom: 5px;
+}
+
+.message-data-container {
+  background-color: #454545;
   border-radius: 5px;
   font-size: 14px;
   margin-bottom: 8px;
@@ -81,17 +87,13 @@
   padding: 8px;
 }
 
-.message-attachment-container--my-message {
-  background-color: #9b27cd;
-}
-
-.message-attachment-container--remote-message {
-  background-color: #0162e4;
-}
-
 .message-attachment-progress-bar-container {
   align-items: center;
   display: flex;
+  margin-top: 3px;
+}
+
+.message-attachment-list-container {
   margin-top: 5px;
 }
 
@@ -143,6 +145,10 @@
 .remote-message {
   align-self: flex-start;
   background-color: #0145a0;
+}
+
+.reply-container {
+  color: #a1c9fe;
 }
 
 .sent-icon {
