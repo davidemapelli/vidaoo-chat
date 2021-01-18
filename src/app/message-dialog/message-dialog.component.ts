@@ -1,5 +1,6 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { Message } from '../models/message';
 
 export enum Action {
   Delete,
@@ -9,8 +10,7 @@ export enum Action {
 }
 
 export interface IInjectedData {
-  messageId: string;
-  messageText: string;
+  message: Message;
   showDeleteButton: boolean;
   showDownloadButton: boolean;
   showEditButton: boolean;
@@ -28,7 +28,6 @@ export interface IResult {
   styleUrls: ['./message-dialog.component.css']
 })
 export class MessageDialogComponent implements OnInit {
-
   public showDeleteButton: boolean = false;
   public showEditButton: boolean = false;
   public showEditMessageSection: boolean = false;
@@ -46,7 +45,7 @@ export class MessageDialogComponent implements OnInit {
     const result: IResult = {
       action: Action.Reply,
       data: {
-        id: this.injectedData.messageId
+        id: this.injectedData.message.id
       }
     };
     this.dialogRef.close(result);
@@ -61,7 +60,7 @@ export class MessageDialogComponent implements OnInit {
     const result: IResult = {
       action: Action.Delete,
       data: {
-        id: this.injectedData.messageId
+        id: this.injectedData.message.id
       }
     };
     this.dialogRef.close(result);
@@ -71,7 +70,7 @@ export class MessageDialogComponent implements OnInit {
     const result: IResult = {
       action: Action.Download,
       data: {
-        id: this.injectedData.messageId
+        id: this.injectedData.message.id
       }
     };
     this.dialogRef.close(result);
@@ -81,8 +80,8 @@ export class MessageDialogComponent implements OnInit {
     const result: IResult = {
       action: Action.Edit,
       data: {
-        id: this.injectedData.messageId,
-        text: this.injectedData.messageText
+        id: this.injectedData.message.id,
+        html: this.injectedData.message.html
       }
     };
     this.dialogRef.close(result);

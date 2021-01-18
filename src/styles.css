@@ -38,3 +38,30 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 mat-form-field {
   width: 100%;
 }
+
+/* QUILL CUSTOMIZATIONS */
+.material-quill-editor > .ql-container {
+  background-color: #454545;
+}
+
+.material-quill-editor > .ql-container > .ql-editor {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+}
+
+.material-quill-editor > .ql-container > .ql-editor.ql-blank::before {
+  font-size: 16px;
+  color: rgb(255, 255, 255, 0.7);
+}
+
+.material-quill-editor > .ql-container > .ql-editor .mention {
+  background-color: #7B1FA2;
+}
+
+.material-quill-editor > .ql-container > .ql-mention-list-container > .ql-mention-list > .ql-mention-list-item {
+  background-color: #9b27cd;
+}
+
+.material-quill-editor > .ql-container > .ql-mention-list-container > .ql-mention-list > .ql-mention-list-item.selected {
+  background-color: #7B1FA2;
+}

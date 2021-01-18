@@ -15,7 +15,7 @@
         appearance="fill">
         <mat-label>Nickname</mat-label>
         <input
-          [(ngModel)]="nickname"
+          [(ngModel)]="me.nickname"
           matInput
           autocomplete="off"
           (keyup.enter)="onJoinButtonClick()">
@@ -24,7 +24,7 @@
       <button
         mat-raised-button
         color="primary"
-        [disabled]="!meetingId || !nickname"
+        [disabled]="!meetingId || !me.nickname"
         (click)="onJoinButtonClick()">
         JOIN
       </button>
@@ -39,10 +39,10 @@
         [ngClass]="message.participantId === me.id ? 'my-message' : 'remote-message'"
         (click)="onMessageClick(message)">
         <div>
-          <span *ngIf="message.participantId !== me.id" class="message-nickname">{{ message.nickname }}</span>
+          <span *ngIf="message.participantId !== me.id" [ngStyle]="{'color': message.color}">{{ message.nickname }}</span>
           <div class="message-time-sent-container">
-            <span class="message-time" [ngClass]="message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ message.sentAt.toLocaleTimeString().substr(0, 5) }}</span>
-            <mat-icon *ngIf="message.sent" class="sent-icon">check</mat-icon>
+            <span class="message-time" [ngClass]="message.participantId === me.id ? 'message-time--my-message' : 'message-time--remote-message'">{{ message.sentAt?.toLocaleTimeString().substr(0, 5) }}</span>
+            <mat-icon *ngIf="message.participantId === me.id && message.sentAt" class="sent-icon">check</mat-icon>
           </div>
         </div>
 
@@ -66,67 +66,76 @@
         <div
           *ngIf="message.replyMessage"
           class="message-data-container">
-          <div [ngClass]="message.participantId === me.id ? 'text-light-violet' : 'text-light-blue'">{{ message.replyMessage.nickname }}</div>
+          <div [ngStyle]="{'color': message.replyMessage.color}">{{ message.replyMessage.nickname }}</div>
           <div>{{ message.replyMessage.text }}</div>
         </div>
 
-        <span
+        <div
           class="message-text"
-          [class.message-text--my-message-text]="message.participantId === me.id">
-          {{ message.text }}
-        </span>
+          [class.message-text--my-message-text]="message.participantId === me.id"
+          [innerHtml]="message.html">
+        </div>
       </div>
     </div>
 
+    <!-- FOOTER -->
     <div class="footer">
-      <div *ngIf="getTypingMessage()" class="typing-message">{{ getTypingMessage() }}</div>
+      <div>
+        <div *ngIf="getTypingMessage()" class="is-typing-message">{{ getTypingMessage() }}</div>
+      </div>
 
-      <div class="my-message-row">
+      <div>
+        <div *ngIf="filesToSend.length > 0" class="my-message-data-container">
+          <button mat-button matSuffix mat-icon-button class="my-message-data-clear-button" (click)="onRemoveFilesButtonClick()">
+            <mat-icon>clear</mat-icon>
+          </button>
+          <div *ngFor="let file of filesToSend">
+            <p>
+              <span class="italic">File: </span> <span>{{ file.name }}</span>
+            </p>
+            <p>
+              <span class="italic">Size: </span> <span>{{ bytes(file.size) }}</span>
+              <span *ngIf="file.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div *ngIf="replyMessage" class="my-message-data-container reply-container">
+          <button mat-button matSuffix mat-icon-button class="my-message-data-clear-button" (click)="onCancelReplyButtonClick()">
+            <mat-icon>clear</mat-icon>
+          </button>
+          <p>
+            <span class="italic">Reply to: </span> <span>{{ replyMessage.nickname }}</span>
+          </p>
+          <p>{{ replyMessage.text }}</p>
+        </div>
+      </div>
+
+      <div>
         <input #fileInput [hidden]="true" type="file" multiple (change)="onFileChange($event)">
         <button class="attach-button" mat-button matSuffix mat-icon-button (click)="onAttachButtonClick()">
           <mat-icon>attach_file</mat-icon>
         </button>
+      </div>
 
-        <div class="my-message-container">
-          <div *ngIf="filesToSend.length > 0" class="my-message-data-container">
-            <button mat-button matSuffix mat-icon-button class="my-message-data-clear-button" (click)="onRemoveFilesButtonClick()">
-              <mat-icon>clear</mat-icon>
-            </button>
-            <div *ngFor="let file of filesToSend">
-              <p>
-                <span class="italic">File: </span> <span>{{ file.name }}</span>
-              </p>
-              <p>
-                <span class="italic">Size: </span> <span>{{ bytes(file.size) }}</span>
-                <span *ngIf="file.size > 524288000" class="attachment-size-alert">Max allowed file size is 500MB</span>
-              </p>
-            </div>
-          </div>
+      <div>
+        <quill-editor
+          #myMessageEditor
+          class="material-quill-editor"
+          [modules]="modules"
+          placeholder="Type here..."
+          (onContentChanged)="onMyMessageEditorContentChanged($event)">
+        </quill-editor>
+      </div>
 
-          <div *ngIf="replyMessage" class="my-message-data-container reply-container">
-            <button mat-button matSuffix mat-icon-button class="my-message-data-clear-button" (click)="onCancelReplyButtonClick()">
-              <mat-icon>clear</mat-icon>
-            </button>
-            <p>
-              <span class="italic">Reply to: </span> <span>{{ replyMessage.nickname }}</span>
-            </p>
-            <p>{{ replyMessage.text }}</p>
-          </div>
-  
-          <mat-form-field
-            appearance="fill">
-            <mat-label>Type here...</mat-label>
-            <input
-              matInput
-              autocomplete="off"
-              [(ngModel)]="myMessage"
-              (keyup)="onMyMessageKeyup($event)">
-            <button mat-button matSuffix mat-icon-button (click)="send()">
-              <mat-icon>send</mat-icon>
-            </button>
-          </mat-form-field>
-        </div>
+      <div>
+        <button mat-button matSuffix mat-icon-button class="send-button" (click)="send()">
+          <mat-icon>send</mat-icon>
+        </button>
       </div>
     </div>
+    <!-- /FOOTER -->
   </div>
 </div>
