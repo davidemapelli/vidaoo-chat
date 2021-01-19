@@ -28,12 +28,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   public filesToSend: File[] = [];
   public me: IParticipant = {
     id: uuidv4(),
-    nickname: 'Davide',
+    nickname: '',
     color: '#e2bcf2',
     typing: false
   };
   public messages: Message[] = [];
-  public meetingId: string = '5f9bec757ecfe6001103cabf';
+  public meetingId: string = '';
   public participants: IParticipant[] = [];
   public replyMessage: Message;
   public session: Session;
